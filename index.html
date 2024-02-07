@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <title>Gemini</title>
+    <link href="CSS/adjetivo.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="flex flex-column align-items-center">
+        <div class="flex">
+            <textarea id="txt-user"></textarea>
+        </div>
+        <div class="flex">
+            <input type="file" />
+            <button id="btn-gerar" title="gerar texto">Gerar</button>
+        </div>
+        <div class="flex">
+            <p id="txt-gerado"></p>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "@google/generative-ai": "https://esm.run/@google/generative-ai"
+          }
+        }
+    </script>
+    <script type="module">
+
+        require('dotenv').config();
+        const API_KEY = process.env.API_KEY;
+
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+
+        // Fetch your API_KEY
+        const API_KEY = "SUACHAVEGOOGLE";
+
+        // Access your API key (see "Set up your API key" above)
+        const genAI = new GoogleGenerativeAI(API_KEY);
+
+        async function run(prompt) {
+            Swal.fire({
+                title: 'Carregando',
+                html: 'Espere um momento',
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            // For text-only input, use the gemini-pro model
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+            console.log(text);
+            document.querySelector("#txt-gerado").innerHTML = text;
+            Swal.close();
+        }
+
+        // Converts a File object to a GoogleGenerativeAI.Part object.
+        async function fileToGenerativePart(file) {
+            const base64EncodedDataPromise = new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            return {
+                inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+            };
+        }
+
+        async function runImage(prompt) {
+            Swal.fire({
+                title: 'Carregando',
+                html: 'Espere um momento',
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+            // For text-and-images input (multimodal), use the gemini-pro-vision model
+            const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+
+            const fileInputEl = document.querySelector("input[type=file]");
+            const imageParts = await Promise.all(
+                [...fileInputEl.files].map(fileToGenerativePart)
+            );
+
+            const result = await model.generateContent([prompt, ...imageParts]);
+            const response = await result.response;
+            const text = response.text();
+            document.querySelector("#txt-gerado").innerHTML = text;
+            Swal.close();
+        }
+
+        function generateText() {
+            const img = document.querySelector("input[type=file]").value;
+            const prompt = document.querySelector("#txt-user").value;
+            if (img == "" || img == null) {
+                run(prompt);
+            }
+            else {
+                runImage(prompt);
+            }
+        }
+
+        // Adiciona o ouvinte de evento ao botão
+        document.getElementById("btn-gerar").addEventListener("click", generateText);
+
+    </script>
+
+</body>
+</html>
